@@ -3,6 +3,8 @@ from geopy.distance import vincenty
 import numpy as np
 import scipy.sparse as sp
 from math import exp
+import pickle
+import pandas as pd
 
 
 class GeoComputer(object):
@@ -97,7 +99,7 @@ class Graph(object):
 
 	def v_string2int(self, v_id):
 		temp = [int(i) for i in v_id.split("_")]
-		return temp[0] * (self.latNum + 1) + temp[1] + 1
+		return temp[0] * (self.latNum + 1) + temp[1]
 
 	def v_int2string(self, v_id):
 		i = int(v_id / (self.latNum + 1))
@@ -168,30 +170,38 @@ class Graph(object):
 			road = row['road']
 			speed = float(row['speed'])
 			points = [p.split(",") for p in road.split(";")]
-			box_list = []
+			temp_box_list = []
 			for i in range(len(points) - 1):
 				if points[i][0] < points[i + 1][0]:
 					temp = self.line_in_box(points[i], points[i + 1])
 				else:
 					temp = self.line_in_box(points[i + 1], points[i])
 					temp.reverse()
-				box_list = box_list[:-1] + temp
-			if len(box_list) > 0:
+				temp_box_list = temp_box_list[:-1] + temp
+			if len(temp_box_list) > 0:
+				box_list = list(set(temp_box_list))
+				box_list.sort(key = temp_box_list.index)
 				box_distance = [0]
 				pre_box = box_list[0]
 				for i in range(len(box_list)):
 					self.vertex[box_list[i]][0] += speed
 					self.vertex[box_list[i]][1] += 1
 					if self.need_edge:
-						box_distance.append(vincenty(self.v_string2latlng(pre_box), self.v_string2latlng(box_list[i])).m + box_distance[-1])
+						box_distance.append(vincenty(self.v_string2latlng(pre_box), self.v_string2latlng(box_list[i])).km + box_distance[-1])
 						j = 0
 						while j < i:
 							dis = box_distance[i + 1] - box_distance[j + 1]
+							temp = exp(-(dis * 3600 / speed) / self.sigma)
+							if box_list[j] == box_list[i]:
+								print(road)
+								print(box_list[i])
+								print(box_list[j])
 							if box_list[j] in self.edges[box_list[i]].keys():
-								self.edges[box_list[i]][box_list[j]].append(exp(-(dis / speed) / self.sigma))
+								self.edges[box_list[i]][box_list[j]].append(temp)
 							else:
-								self.edges[box_list[i]][box_list[j]] = [exp(-(dis / speed) / self.sigma)]
+								self.edges[box_list[i]][box_list[j]] = [temp]
 							j += 1
+						pre_box = box_list[i]
 		if self.need_edge:
 			adj = np.zeros(((self.lngNum + 1) * (self.latNum + 1), (self.lngNum + 1) * (self.latNum + 1)))
 			for box1 in self.edges.keys():
@@ -214,3 +224,29 @@ class Graph(object):
 
 	def e_to_matrix(self):
 		return self.edges
+
+	def filt_with_rect(self, rect):
+		selected_vertex = []
+		for i in range((self.latNum + 1) * (self.lngNum + 1)):
+			box = self.v_int2string(i)
+			pos = self.v_string2latlng(box, mode = 0)
+			if rect['leftLng'] < pos[0] < rect['rightLng'] and rect['bottomLat'] < pos[1] < rect['topLat'] and self.edges[i].sum() != 0:
+				selected_vertex.append(i)
+		res = self.edges.toarray()
+		res = res[:, selected_vertex]
+		res = res[selected_vertex, :]
+		res = sp.csr_matrix(res, shape = res.shape, dtype = np.float32, copy = False)
+		return res, selected_vertex
+
+
+if __name__ == '__main__':
+	data = pd.read_csv("F:/DATA/dataset/v1/road_set.csv")
+	m = Graph(1000, data, need_edge = True)
+	a, selected_vertex = m.filt_with_rect(rect = {"leftLng": 121.414316, "rightLng": 121.581042, "topLat": 31.295972, "bottomLat": 31.182597})
+	count = 0
+	for i in range(a.shape[0]):
+		if a[i, i] != 0:
+			count += 1
+	print(count)
+	with open("F:/DATA/dataset/v1/selected_vertex.dat", 'wb') as f:
+		pickle.dump(selected_vertex, f)

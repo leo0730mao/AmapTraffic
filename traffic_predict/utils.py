@@ -10,20 +10,26 @@ def new_load_data(src):
     with open(src + "/train_purposed.dat", 'rb') as f:
         data = pickle.load(f)
     train_X, train_y = data['X'], data['y']
-    print("size: X (%s,%s,%s), y (%s,%s)" % tuple(train_X[0].shape + train_y.shape))
+    print("size: X (%s,%s,%s,%s), y (%s,%s)" % tuple(train_X.shape + train_y.shape))
 
     with open(src + "/test_purposed.dat", 'rb') as f:
         data = pickle.load(f)
     test_X, test_y = data['X'], data['y']
-    print("size: X (%s,%s,%s), y (%s,%s)" % tuple(test_X[0].shape + test_y.shape))
+    print("size: X (%s,%s,%s,%s), y (%s,%s)" % tuple(test_X.shape + test_y.shape))
 
-    train_X = [torch.Tensor(x) for x in train_X]
+    train_X = torch.Tensor(train_X)
     train_y = torch.Tensor(train_y)
-    test_X = [torch.Tensor(x) for x in test_X]
+    test_X = torch.Tensor(test_X)
     test_y = torch.Tensor(test_y)
 
-    with open("F:/DATA/dataset/v1/adj.dat", 'rb') as f:
+    train_X = torch.split(train_X, 1, dim = 1)
+    train_X = [x.squeeze(1) for x in train_X]
+    test_X = torch.split(test_X, 1, dim = 1)
+    test_X = [x.squeeze(1) for x in test_X]
+
+    with open("F:/DATA/dataset/v1/G.dat", 'rb') as f:
         T_k = pickle.load(f)
+    T_k = [sp.csr_matrix(m, dtype = np.float32) for m in T_k]
     T_k = [sparse_mx_to_torch_sparse_tensor(m) for m in T_k]
     return train_X,  train_y, test_X, test_y, T_k
 

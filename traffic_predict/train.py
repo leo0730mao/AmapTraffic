@@ -9,8 +9,8 @@ import numpy as np
 import torch
 import torch.optim as optim
 from torch.nn import MSELoss
-from utils import new_load_data
-from models import GCN
+from pygcn.utils import new_load_data
+from pygcn.models import GCN
 
 # Training settings
 parser = argparse.ArgumentParser()
