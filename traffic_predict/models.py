@@ -49,15 +49,16 @@ class LSTM(nn.Module):
         self.batch_size = batch_size
         self.vertex_num = vertex_num
 
-        self.gru = nn.GRU(input_size = 1, hidden_size = 16, batch_first = True).cuda()
+        self.gru = nn.GRU(input_size = 1, hidden_size = 1024, batch_first = True).cuda()
 
         self.dropout = dropout
 
-        self.fc1 = nn.Linear(64, 1).cuda()
+        self.fc1 = nn.Linear(1024, 1).cuda()
 
     def forward(self, X):
-        _, output = self.gru(X)
-        output = self.fc1(output).reshape(self.batch_size, self.vertex_num)
+        output, _ = self.gru(X.cuda())
+        output = output[:, -1, :]
+        output = F.relu(self.fc1(output))
         return output
 
 
@@ -77,7 +78,7 @@ class HA:
         # print("predict mse loss is: %s" % (res / count))
 
 
-if __name__ == '__main__':
+def HA_test():
     with open("F:/DATA/dataset/v1/HA.dat", 'rb') as f:
         data = pickle.load(f)
     data = data.toarray()
@@ -92,4 +93,3 @@ if __name__ == '__main__':
         res['min'].append(loss.min())
     res = pd.DataFrame(res)
     res.to_csv("F:/DATA/dataset/v1/HA_result.csv", index = False)
-

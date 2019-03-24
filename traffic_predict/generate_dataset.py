@@ -74,7 +74,7 @@ class DataBuilder:
 
 	def build_feature_as_matrix(self, mode = "train"):
 		print("build %s data's matrix..." % mode)
-		res_path = "%s/%s/X.csv" % (self.path, mode)
+		res_path = "%s/%s/X.dat" % (self.path, mode)
 		if os.path.exists(res_path):
 			return
 		else:
@@ -83,34 +83,21 @@ class DataBuilder:
 			files = []
 			for d in dirs:
 				files += ["%s/%s" % (d, file) for file in os.listdir(d)]
-			res = {}
-			for i in range(4148):
-				res[i] = []
-			res['year'] = []
-			res['month'] = []
-			res['day'] = []
-			res['hour'] = []
-			res['minute'] = []
-			res['ifholiday'] = []
-			holiday_info = pd.read_csv("%s/holiday_info.csv" % self.path)
+			res = None
+
 			for file in files:
 				with open(file, 'rb') as f:
 					data = pickle.load(f)
 				print("%s read success" % file)
 				vertex = data.v_to_vector()
-				for i in range(len(vertex)):
-					res[i].append(vertex[i])
-				date_info = os.path.split(file)[1].split(".")[0].split("-")
-				date = "-".join(date_info)[:10]
-				res['year'].append(int(date_info[0]))
-				res['month'].append(int(date_info[1]))
-				res['day'].append(int(date_info[2]))
-				res['hour'].append(int(date_info[3]))
-				res['minute'].append(int(date_info[4]))
-				res['ifholiday'].append(int(holiday_info[holiday_info['date'] == date]['type'].tolist()[0]))
-			res = pd.DataFrame(res)
-
-			res.to_csv(res_path, index = False)
+				if res is None:
+					res = vertex
+				else:
+					res = np.row_stack((res, vertex))
+			res = res.reshape(res.shape[0], res.shape[1], 1)
+			print("matrix shape is: (%s, %s, %s)" % res.shape)
+			with open(res_path, 'wb') as f:
+				pickle.dump(res, f)
 
 	def build_data_for_purposed_model(self, mode = "train"):
 		print("building %s data for purposed model..." % mode)
@@ -315,6 +302,25 @@ class DataReader:
 		if if_adj:
 			x = x[self.selected_vertex, :]
 		return x
+
+	def load_data_for_lstm(self, mode):
+		with open("%s/%s_purposed.dat" % (self.path, mode), 'rb') as f:
+			data = pickle.load(f)
+		y = data['y'].flatten()
+		data = data['X']
+		for i in range(len(data)):
+			data[i] = data[i].flatten()
+		x = None
+		for d in data:
+			if x is None:
+				x = d
+			else:
+				x = np.column_stack((x, d))
+		x = x.reshape(x.shape[0], x.shape[1], 1)
+		x = torch.Tensor(x)
+		y = torch.Tensor(y)
+		print("%s data shape: (%s, %s, %s), (%s)" % (mode, x.shape[0], x.shape[1], x.shape[2], y.shape[0]))
+		return x, y
 
 
 if __name__ == '__main__':

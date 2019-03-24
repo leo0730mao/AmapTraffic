@@ -74,7 +74,7 @@ class Graph(object):
 		self.vertex = {}
 		for i in range(self.lngNum + 1):
 			for j in range(self.latNum + 1):
-				self.edges["%s_%s" % (i, j)] = {}
+				self.edges["%_s%s" % (i, j)] = {}
 				self.vertex["%s_%s" % (i, j)] = [0, 0]
 		self.data = data
 		self.generate()
