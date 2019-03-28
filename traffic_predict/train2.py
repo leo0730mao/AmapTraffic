@@ -10,8 +10,8 @@ import torch
 import torch.optim as optim
 from torch.nn import MSELoss
 from torch.optim import lr_scheduler
-from pygcn.generate_dataset import DataReader
-from pygcn.models import GCN, LSTM
+from traffic_predict.generate_dataset import DataReader
+from traffic_predict.models import GCN, LSTM
 
 
 def config_model():

@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import numpy as np
-from pygcn.layers import GraphConvolution
+from traffic_predict.layers import GraphConvolution
 import pandas as pd
 
 
@@ -71,7 +71,7 @@ class HA:
             feature = input_x[i - timestep: i]
             output_y = np.mean(feature, axis = 0)
             true_y = input_x[i]
-            res.append(np.square(output_y - true_y).mean())
+            res.append(np.sqrt(np.square(output_y - true_y).mean()))
             count += 1
         res = np.array(res)
         return res
@@ -81,7 +81,6 @@ class HA:
 def HA_test():
     with open("F:/DATA/dataset/v1/HA.dat", 'rb') as f:
         data = pickle.load(f)
-    data = data.toarray()
     model = HA()
     res = {'mean': [], 'var': [], 'max': [], 'min': [], 'timesteps': []}
     for i in range(1, 24):
@@ -93,3 +92,7 @@ def HA_test():
         res['min'].append(loss.min())
     res = pd.DataFrame(res)
     res.to_csv("F:/DATA/dataset/v1/HA_result.csv", index = False)
+
+
+if __name__ == '__main__':
+    HA_test()

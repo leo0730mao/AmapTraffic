@@ -1,6 +1,6 @@
-from pygcn.MyGraph import Graph
-from pygcn.utils import *
-from pygcn.config import *
+from traffic_predict.MyGraph import Graph
+from traffic_predict.utils import *
+from traffic_predict.config import *
 import os
 import pickle
 import torch
@@ -191,7 +191,7 @@ class DataBuilder:
 		if os.path.exists(res_path):
 			return
 		else:
-			with open("%s/train/X.dat" % self.path, 'rb') as f:
+			with open("%s/test/X.dat" % self.path, 'rb') as f:
 				data = pickle.load(f)
 			data = self.compression_data(data)
 			print(data.shape)
@@ -322,6 +322,31 @@ class DataReader:
 		print("%s data shape: (%s, %s, %s), (%s)" % (mode, x.shape[0], x.shape[1], x.shape[2], y.shape[0]))
 		return x, y
 
+	def load_data_for_seq(self, mode):
+		with open("%s/%s/X.dat" % (self.path, mode), 'rb') as f:
+			data = pickle.load(f)
+		data = self.compression_data(data)
+		features = []
+		for i in range(48):
+			features.append(data[i:])
+		for i in range(47):
+			features[i] = features[i][:i - 47]
+		for i in range(len(features)):
+			features[i] = features[i].flatten()
+		x = None
+		y = None
+		for i in range(24):
+			if i == 0:
+				x = features[i]
+				y = features[i + 24]
+			else:
+				x = np.column_stack((x, features[i]))
+				y = np.column_stack((y, features[i + 24]))
+		return x, y
+
 
 if __name__ == '__main__':
-	db = DataBuilder("F:/DATA/dataset/v1")
+	db = DataReader("F:/DATA/dataset/v1")
+	x, y = db.load_data_for_seq("train")
+	print(x.shape)
+	print(y.shape)
