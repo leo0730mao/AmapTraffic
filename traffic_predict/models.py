@@ -2,7 +2,6 @@ import pickle
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
 import numpy as np
 from traffic_predict.layers import GraphConvolution
 import pandas as pd
@@ -35,31 +34,51 @@ class GCN(nn.Module):
             x_list.append(x.reshape(x.shape[0] * x.shape[1], x.shape[2]))
         H = torch.stack(x_list, dim = 1).cuda()
 
-        _, output = self.gru(H)
-
-        output = output.squeeze(0)
-        outputs = self.fc1(output).reshape(X[0].shape[0], self.vertex_num)
-        return outputs
+        out, _ = self.gru(H.cuda())
+        out = self.fc1(out[:, -1, :])
+        return out
 
 
 class LSTM(nn.Module):
-    def __init__(self, dropout, batch_size = 16, vertex_num = 194):
+    def __init__(self, dropout, batch_size = 1024, vertex_num = 194):
         super(LSTM, self).__init__()
 
         self.batch_size = batch_size
         self.vertex_num = vertex_num
 
-        self.gru = nn.GRU(input_size = 1, hidden_size = 1024, batch_first = True).cuda()
-
+        self.gru = nn.GRU(input_size = 1, hidden_size = 128, batch_first = True).cuda()
         self.dropout = dropout
 
-        self.fc1 = nn.Linear(1024, 1).cuda()
+        self.fc1 = nn.Linear(128, 1).cuda()
+        self.weight = torch.Tensor([1])
 
-    def forward(self, X):
-        output, _ = self.gru(X.cuda())
-        output = output[:, -1, :]
-        output = F.relu(self.fc1(output))
-        return output
+    def forward(self, x):
+        out, _ = self.gru(x.cuda())
+        out = self.fc1(out[:, -1, :])
+        return out
+
+
+class Seq2seq(nn.Module):
+    def __init__(self, dropout, batch_size = 1024, vertex_num = 194):
+        super(Seq2seq, self).__init__()
+
+        self.batch_size = batch_size
+        self.vertex_num = vertex_num
+
+        self.encoder = nn.GRU(input_size = 1, hidden_size = 128, batch_first = True).cuda()
+        self.decoder = nn.GRU(input_size = 128, hidden_size = 128, batch_first = False).cuda()
+        self.dropout = dropout
+
+        self.fc1 = nn.Linear(128, 1).cuda()
+        self.weight = torch.Tensor([1])
+
+    def forward(self, x, time_feature):
+        _, ctx = self.encoder(x.cuda())
+        ctx = ctx.repeat(24, 1, 1)
+        out, _ = self.decoder(ctx)
+        out = self.fc1(out)
+        out = out.permute(1, 0, 2).squeeze(-1)
+        return out
 
 
 class HA:

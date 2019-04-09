@@ -75,21 +75,37 @@ class DataBuilder:
 	def build_feature_as_matrix(self, mode = "train"):
 		print("build %s data's matrix..." % mode)
 		res_path = "%s/%s/X.dat" % (self.path, mode)
+		time_feature_path = "%s/%s/time_feature.dat" % (self.path, mode)
 		if os.path.exists(res_path):
 			return
 		else:
 			graph_path = "%s/%s/graph" % (self.path, mode)
+			holi_info = pd.read_csv("%s/holiday_info.csv" % self.path)
 			dirs = ["%s/%s" % (graph_path, d) for d in os.listdir(graph_path)]
 			files = []
 			for d in dirs:
 				files += ["%s/%s" % (d, file) for file in os.listdir(d)]
 			res = None
-
+			time_feature = None
 			for file in files:
 				with open(file, 'rb') as f:
 					data = pickle.load(f)
 				print("%s read success" % file)
+				t = os.path.split(file)[1].split(".")[0]
+				day_type = holi_info[holi_info['date'] == t[:10]]['type'].tolist()[0]
+
+				ctx = [0] * 6
+				ctx[day_type] = 1
+				ctx[3] = int(t[11:13])
+				ctx[4] = float(t[14:16]) / 10
+				if (ctx[3] in range(6, 9)) or (ctx[3] in range(16, 19)):
+					ctx[5] = 1
+
 				vertex = data.v_to_vector()
+				if time_feature is None:
+					time_feature = ctx
+				else:
+					time_feature = np.row_stack((time_feature, ctx))
 				if res is None:
 					res = vertex
 				else:
@@ -98,17 +114,19 @@ class DataBuilder:
 			print("matrix shape is: (%s, %s, %s)" % res.shape)
 			with open(res_path, 'wb') as f:
 				pickle.dump(res, f)
+			with open(time_feature_path, 'wb') as f:
+				pickle.dump(time_feature, f)
 
 	def build_data_for_purposed_model(self, mode = "train"):
 		print("building %s data for purposed model..." % mode)
 		res_path = "%s/%s_purposed.dat" % (self.path, mode)
-		ctx_path = "%s/%s_ctx_purposed.dat" % (self.path, mode)
+		time_feature_path = "%s/%s_time_feature_purposed.dat" % (self.path, mode)
 		if os.path.exists(res_path):
 			return
 		else:
-			with open("%s/%s/X.dat" % (self.path, mode), 'rb') as f:
+			with open(res_path, 'rb') as f:
 				feature = pickle.load(f).toarray()
-			with open("%s/%s/ctx.dat" % (self.path, mode), 'rb') as f:
+			with open(time_feature_path, 'rb') as f:
 				raw_ctx = pickle.load(f)
 			feature = self.compression_data(feature)
 			features = []
@@ -130,7 +148,7 @@ class DataBuilder:
 			print(ctx_res['X'][0].shape)
 			with open(res_path, 'wb') as f:
 				pickle.dump(res, f)
-			with open(ctx_path, 'wb') as f:
+			with open(time_feature_path, 'wb') as f:
 				pickle.dump(ctx_res, f)
 
 	def build_data_graph(self, mode = "train", length = 1000):
@@ -325,28 +343,54 @@ class DataReader:
 	def load_data_for_seq(self, mode):
 		with open("%s/%s/X.dat" % (self.path, mode), 'rb') as f:
 			data = pickle.load(f)
+		with open("%s/%s/time_feature.dat" % (self.path, mode), 'rb') as f:
+			time_feature = pickle.load(f)
 		data = self.compression_data(data)
+		time_feature = np.repeat(np.expand_dims(time_feature, axis = 1), data.shape[1], axis = 1)
 		features = []
+		ctx = []
 		for i in range(48):
 			features.append(data[i:])
+			ctx.append(time_feature[i:])
 		for i in range(47):
 			features[i] = features[i][:i - 47]
+			ctx[i] = ctx[i][:i - 47]
 		for i in range(len(features)):
 			features[i] = features[i].flatten()
-		x = None
-		y = None
-		for i in range(24):
-			if i == 0:
-				x = features[i]
-				y = features[i + 24]
-			else:
-				x = np.column_stack((x, features[i]))
-				y = np.column_stack((y, features[i + 24]))
-		return x, y
+			ctx[i] = ctx[i].reshape(ctx[i].shape[0] * ctx[i].shape[1], ctx[i].shape[2])
+		x = np.stack(features[:24], axis = 1)
+		y = np.stack(features[24:], axis = 1)
+		ctx_x = np.stack(ctx[:24], axis = 1)
+		ctx_y = np.stack(ctx[24:], axis = 1)
+
+		x = self.remove_zero(x)
+		y = self.remove_zero(y)
+		x = x.reshape(x.shape[0], x.shape[1], 1)
+		# y = y.reshape(y.shape[0], y.shape[1], 1)
+		print(np.sum(x == 0))
+		print(np.sum(y == 0))
+		x = torch.Tensor(x)
+		y = torch.Tensor(y)
+
+		ctx_x = torch.Tensor(ctx_x)
+		ctx_y = torch.Tensor(ctx_y)
+		return x, y, ctx_x, ctx_y
+
+	def remove_zero(self, x):
+		for i in range(x.shape[0]):
+			for j in range(x.shape[1]):
+				if x[i, j] == 0:
+					if j + 1 < x.shape[1]:
+						x[i, j] = x[i, j - 1] + x[i, j + 1]
+					else:
+						x[i, j] = x[i, j - 1]
+		return x
 
 
 if __name__ == '__main__':
 	db = DataReader("F:/DATA/dataset/v1")
-	x, y = db.load_data_for_seq("train")
+	x, y, ctx_x, ctx_y = db.load_data_for_seq("train")
 	print(x.shape)
 	print(y.shape)
+	print(ctx_x.shape)
+	print(ctx_y.shape)

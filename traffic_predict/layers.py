@@ -18,7 +18,7 @@ class GraphConvolution(Module):
         self.output_dim = output_dim
         self.vertex_num = vertex_num
         self.K = K
-        self.weight = Parameter(torch.Tensor(self.K, input_dim, output_dim).cuda())
+        self.weight = Parameter(torch.Tensor(self.K * input_dim, output_dim).cuda())
         if bias:
             self.bias = Parameter(torch.Tensor(output_dim).cuda())
         else:
@@ -35,17 +35,15 @@ class GraphConvolution(Module):
         inputs = torch.split(input, 1, 0)
         outputs = []
         for x in inputs:  # x's size: (1, vertex_num, dim)
-            x = x.squeeze(0)
-            out = None
-            for i in range(len(T_k)):
-                temp = torch.spmm(T_k[i].cuda(), x)
-                if out is None:
-                    out = torch.mm(temp, self.weight[i])
-                else:
-                    out += torch.mm(temp, self.weight[i])
+            x = x.squeeze(0).cuda()
+            x_list = []
+            for T in T_k:
+                x_list.append(torch.spmm(T.cuda(), x))
+            x_list = torch.cat(tuple(x_list), dim = 1)  # x_list's size: (vertex_num, K * support)
+            output = torch.mm(x_list, self.weight)
             if self.bias is not None:
-                out += self.bias
-            outputs.append(out)
+                output += self.bias
+            outputs.append(output)
         outputs = torch.stack(outputs, dim = 0)  # outputs' size: (batch_size, vertex_num, output_dim)
         return outputs
 
