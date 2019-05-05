@@ -2,15 +2,16 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="73eb4827-e73a-4d1b-99ba-8d923b445172" name="Default" comment="">
-      <change beforePath="" afterPath="$PROJECT_DIR$/analysis/cluster.py" />
-      <change beforePath="" afterPath="$PROJECT_DIR$/analysis/utils.py" />
-      <change beforePath="" afterPath="$PROJECT_DIR$/traffic_predict/seq2seq_evaluate.py" />
+      <change beforePath="" afterPath="$PROJECT_DIR$/.gitignore" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change beforePath="$PROJECT_DIR$/traffic_predict/Analysis.py" afterPath="$PROJECT_DIR$/traffic_predict/Analysis.py" />
-      <change beforePath="$PROJECT_DIR$/traffic_predict/MyGraph.py" afterPath="$PROJECT_DIR$/traffic_predict/MyGraph.py" />
-      <change beforePath="$PROJECT_DIR$/traffic_predict/generate_dataset.py" afterPath="$PROJECT_DIR$/traffic_predict/generate_dataset.py" />
-      <change beforePath="$PROJECT_DIR$/traffic_predict/models.py" afterPath="$PROJECT_DIR$/traffic_predict/models.py" />
-      <change beforePath="$PROJECT_DIR$/traffic_predict/train2.py" afterPath="$PROJECT_DIR$/traffic_predict/train2.py" />
+      <change beforePath="$PROJECT_DIR$/README.md" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/__init__.py" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/pytorch_cluster-master.zip" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/pytorch_geometric-master.zip" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/pytorch_scatter-master.zip" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/pytorch_sparse-master.zip" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/中间结果/模型性能.txt" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/折线图" afterPath="" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -79,8 +80,8 @@
       <file leaf-file-name="MyGraph.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/traffic_predict/MyGraph.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="326">
-              <caret line="272" column="29" lean-forward="false" selection-start-line="272" selection-start-column="29" selection-end-line="272" selection-end-column="29" />
+            <state relative-caret-position="248">
+              <caret line="269" column="42" lean-forward="true" selection-start-line="269" selection-start-column="42" selection-end-line="269" selection-end-column="42" />
               <folding>
                 <element signature="e#0#11#0" expanded="true" />
               </folding>
@@ -166,6 +167,7 @@
         <option value="$PROJECT_DIR$/traffic_predict/train2.py" />
         <option value="$PROJECT_DIR$/traffic_predict/seq2seq_evaluate.py" />
         <option value="$PROJECT_DIR$/traffic_predict/MyGraph.py" />
+        <option value="$PROJECT_DIR$/.gitignore" />
       </list>
     </option>
   </component>
@@ -221,11 +223,6 @@
             <path>
               <item name="AmapTraffic" type="b2602c69:ProjectViewProjectNode" />
               <item name="AmapTraffic" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="AmapTraffic" type="b2602c69:ProjectViewProjectNode" />
-              <item name="AmapTraffic" type="462c0819:PsiDirectoryNode" />
-              <item name="traffic_predict" type="462c0819:PsiDirectoryNode" />
             </path>
           </expand>
           <select />
@@ -430,13 +427,6 @@
     <watches-manager />
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://D:/Python35/Lib/site-packages/keras/layers/core.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="20">
-          <caret line="861" column="68" lean-forward="true" selection-start-line="861" selection-start-column="68" selection-end-line="861" selection-end-column="68" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://D:/Python35/Lib/site-packages/tensorflow/python/framework/tensor_util.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="258">
@@ -704,10 +694,18 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/.gitignore">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="8" lean-forward="false" selection-start-line="0" selection-start-column="8" selection-end-line="0" selection-end-column="8" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/traffic_predict/MyGraph.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="326">
-          <caret line="272" column="29" lean-forward="false" selection-start-line="272" selection-start-column="29" selection-end-line="272" selection-end-column="29" />
+        <state relative-caret-position="248">
+          <caret line="269" column="42" lean-forward="true" selection-start-line="269" selection-start-column="42" selection-end-line="269" selection-end-column="42" />
           <folding>
             <element signature="e#0#11#0" expanded="true" />
           </folding>
