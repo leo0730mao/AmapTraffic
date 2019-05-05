@@ -113,7 +113,7 @@ def AvgRoad(files):
 
 
 def coveringRate():
-	roads = pd.read_csv("F:/DATA/temp/graph.csv")['road'].tolist()
+	roads = pd.read_csv("F:/DATA/dataset/v1/road_set.csv")['road'].tolist()
 	len_sum = 0
 	for road in roads:
 		points = [p.split(",") for p in road.split(";")]
@@ -122,7 +122,7 @@ def coveringRate():
 		for i in range(len(points) - 1):
 			len_sum += vincenty([float(j) for j in points[i]], [float(j) for j in points[i + 1]]).m
 	del roads
-	roads = gpd.read_file("data/planet_121.119,30.867_121.829,31.412.osm.geojson")
+	roads = gpd.read_file("H:/MyPythonWorkSpace/GaoDeng/data/planet_121.119,30.867_121.829,31.412.osm.geojson")
 	len_sum_osm = 0
 	for road_type in ['motorway', 'trunk', 'primary', 'secondary', 'tertiary']:
 		temp = roads[roads['highway'] == road_type]['geometry'].tolist()

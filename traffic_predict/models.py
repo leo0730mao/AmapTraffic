@@ -19,23 +19,29 @@ class GCN(nn.Module):
         self.gc2 = GraphConvolution(16, 32, vertex_num, k)
         self.gc3 = GraphConvolution(32, 64, vertex_num, k)
 
-        self.gru = nn.GRU(input_size = 64, hidden_size = 64, batch_first = True).cuda()
+        self.encoder = nn.GRU(input_size = 64, hidden_size = 128, batch_first = True).cuda()
+        self.decoder = nn.GRU(input_size = 128, hidden_size = 128, batch_first = False).cuda()
 
         self.dropout = dropout
 
-        self.fc1 = nn.Linear(64, 1).cuda()
+        self.fc1 = nn.Linear(134, 1).cuda()
 
-    def forward(self, X, adj):
+    def forward(self, X, adj, time_feature):  # X[(batch_size, vertex_num, 1)] * 24
         x_list = []
         for i in range(len(X)):
             x = F.relu(self.gc1(X[i].cuda(), adj), inplace = True)
             x = F.relu(self.gc2(x, adj), inplace = True)
-            x = F.relu(self.gc3(x, adj), inplace = True)
+            x = F.relu(self.gc3(x, adj), inplace = True)  # x(batch_size, vertex_num, dim)
             x_list.append(x.reshape(x.shape[0] * x.shape[1], x.shape[2]))
-        H = torch.stack(x_list, dim = 1).cuda()
+        H = torch.stack(x_list, dim = 1).cuda()  # H(batch_size * vertex_num, 24, dim)
 
-        out, _ = self.gru(H.cuda())
-        out = self.fc1(out[:, -1, :])
+        _, ctx = self.encoder(H.cuda())
+        ctx = ctx.repeat(24, 1, 1)
+        out, _ = self.decoder(ctx)
+        out = out.permute(1, 0, 2)  # out(batch_size * vertex_num, 24, 128)
+        out = torch.cat((out, time_feature), 2)
+        out = self.fc1(out)
+        out = out.squeeze(-1)  # out(batch_size * vertex_num, 24, 1)
         return out
 
 
@@ -69,15 +75,17 @@ class Seq2seq(nn.Module):
         self.decoder = nn.GRU(input_size = 128, hidden_size = 128, batch_first = False).cuda()
         self.dropout = dropout
 
-        self.fc1 = nn.Linear(128, 1).cuda()
+        self.fc1 = nn.Linear(134, 1).cuda()
         self.weight = torch.Tensor([1])
 
     def forward(self, x, time_feature):
         _, ctx = self.encoder(x.cuda())
         ctx = ctx.repeat(24, 1, 1)
         out, _ = self.decoder(ctx)
+        out = out.permute(1, 0, 2)
+        out = torch.cat((out, time_feature), 2)
         out = self.fc1(out)
-        out = out.permute(1, 0, 2).squeeze(-1)
+        out = out.squeeze(-1)
         return out
 
 

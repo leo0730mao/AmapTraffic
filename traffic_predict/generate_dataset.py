@@ -11,7 +11,7 @@ import networkx as nx
 
 
 class DataBuilder:
-	def __init__(self, path, length = 1000, time_steps = 24, if_need_graph = False):
+	def __init__(self, path, length = 1000, time_steps = 48, if_need_graph = False):
 		self.path = path
 		self.length = length
 		self.time_steps = time_steps
@@ -31,7 +31,7 @@ class DataBuilder:
 		self.selected_vertex = [int(i) for i in self.selected_vertex]
 		self.build_adj()
 
-		for mode in ['train', 'test']:
+		for mode in ['newyear']:
 			if if_need_graph:  # 若尚未将原始数据划分到区域
 				# 创建每个时间段对应的graph文件
 				# 产生文件./mode/graph/time_slot.dat
@@ -43,7 +43,7 @@ class DataBuilder:
 
 			# 构建目标模型的合法输入X, y, size: (time_slot_num, vertex_num, 1), X为长time_step的list
 			# 产生文件./mode_purposed.dat
-			self.build_data_for_purposed_model(mode = mode)
+			# self.build_data_for_purposed_model(mode = mode)
 
 	def build_road_set(self):
 		print("building road set...")
@@ -141,10 +141,10 @@ class DataBuilder:
 				ctx[i] = ctx[i][:i - self.time_steps]
 				features[i] = np.reshape(features[i], (features[i].shape[0], features[i].shape[1], 1))
 			res['X'] = features[:-1]
-			res['y'] = features[-1]
+			res['y'] = features[1:]
 			ctx_res['X'] = ctx[:-1]
-			ctx_res['y'] = ctx[-1]
-			print("X(%s, %s, %s, %s) y(%s, %s)" % tuple((len(res['X']),) + res['X'][0].shape + res['y'].shape))
+			ctx_res['y'] = ctx[1:]
+			print("X(%s, %s, %s) y(%s, %s, %s)" % tuple(res['X'][0].shape + res['y'][0].shape))
 			print(ctx_res['X'][0].shape)
 			with open(res_path, 'wb') as f:
 				pickle.dump(res, f)
@@ -163,7 +163,7 @@ class DataBuilder:
 			print(fileName)
 			file = csv_path + '/' + fileName
 			date = fileName.split(".")[0]
-			date_path = "%s/%s" % (csv_path, date)
+			date_path = "%s/%s" % (dst_path, date)
 			if not os.path.exists(date_path):
 				os.mkdir(date_path)
 			data = pd.read_csv(file, encoding = "gbk")
@@ -262,64 +262,42 @@ class DataReader:
 		with open("%s/selected_vertex.dat" % self.path, 'rb') as f:
 			self.selected_vertex = pickle.load(f)
 
-	def load_data(self, need_ctx = False):
-		print("load data set for model %s..." % self.model_type)
-		with open("%s/train_%s.dat" % (self.path, self.model_type), 'rb') as f:
-			data = pickle.load(f)
-		train_x, train_y = data['X'], data['y']
-		print("size: X (%s,%s,%s), y (%s,%s)" % tuple(train_x[0].shape + train_y.shape))
-
-		with open("%s/test_%s.dat" % (self.path, self.model_type), 'rb') as f:
-			data = pickle.load(f)
-		test_x, test_y = data['X'], data['y']
-		print("size: X (%s,%s,%s), y (%s,%s)" % tuple(test_x[0].shape + test_y.shape))
-
+	def load_adj(self):
 		with open("%s/adj.dat" % self.path, 'rb') as f:
 			adj = pickle.load(f)
-		# adj = sp.csr_matrix(self.compression_data(adj.toarray(), if_adj = True))
-		# adj = sp.coo_matrix(adj, dtype = np.float32)
-		# edge_index = torch.Tensor(np.row_stack((adj.row, adj.col)))
-		# edge_weight = torch.Tensor(adj.data)
-
 		adj = [sparse_mx_to_torch_sparse_tensor(m) for m in adj]
+		return adj
 
-		"""train_x = [self.compression_data(x) for x in train_x]
-		train_y = self.compression_data(train_y)
-		test_x = [self.compression_data(x) for x in test_x]
-		test_y = self.compression_data(test_y)"""
+	def load_data_for_gcn(self, mode):
+		with open("%s/%s/X.dat" % (self.path, mode), 'rb') as f:
+			data = pickle.load(f)
+		with open("%s/%s/time_feature.dat" % (self.path, mode), 'rb') as f:
+			time_feature = pickle.load(f)
+		data = self.compression_data(data)
+		time_feature = np.repeat(np.expand_dims(time_feature, axis = 1), data.shape[1], axis = 1)
+		features = []
+		ctx = []
+		for i in range(48):
+			features.append(data[i:])
+			ctx.append(time_feature[i:])
+		for i in range(47):
+			features[i] = features[i][:i - 47]
+			ctx[i] = ctx[i][:i - 47]
+		for i in range(len(features)):
+			ctx[i] = ctx[i].reshape(ctx[i].shape[0] * ctx[i].shape[1], ctx[i].shape[2])
+		ctx_x = np.stack(ctx[:24], axis = 1)
+		ctx_y = np.stack(ctx[24:], axis = 1)
 
-		train_x = [torch.Tensor(x) for x in train_x]
-		train_y = torch.Tensor(train_y)
-		test_x = [torch.Tensor(x) for x in test_x]
-		test_y = torch.Tensor(test_y)
+		x = [self.remove_zero_3d(x) for x in features[:24]]
+		y = [self.remove_zero_3d(y) for y in features[24:]]
+		print(np.sum(x == 0))
+		print(np.sum(y == 0))
+		x = [torch.Tensor(item) for item in x]
+		y = [torch.Tensor(item) for item in y]
 
-		if need_ctx:
-			with open("%s/train_ctx_%s.dat" % (self.path, self.model_type), 'rb') as f:
-				data = pickle.load(f)
-			train_ctx_x, train_ctx_y = data['X'], data['y']
-			train_ctx_x = [np.tile(np.expand_dims(x, axis = 1), (1, train_x[0].shape[1], 1)) for x in train_ctx_x]
-			train_ctx_y = np.tile(np.expand_dims(train_ctx_y, axis = 1), (1, train_x[0].shape[1], 1))
-
-			with open("%s/test_ctx_%s.dat" % (self.path, self.model_type), 'rb') as f:
-				data = pickle.load(f)
-			test_ctx_x, test_ctx_y = data['X'], data['y']
-			test_ctx_x = [np.tile(np.expand_dims(x, axis = 1), (1, train_x[0].shape[1], 1)) for x in test_ctx_x]
-			test_ctx_y = np.tile(np.expand_dims(test_ctx_y, axis = 1), (1, train_x[0].shape[1], 1))
-
-			train_ctx_x = [torch.Tensor(x) for x in train_ctx_x]
-			train_ctx_y = torch.Tensor(train_ctx_y)
-			test_ctx_x = [torch.Tensor(x) for x in test_ctx_x]
-			test_ctx_y = torch.Tensor(test_ctx_y)
-
-			return train_x, train_y, test_x, test_y, adj, train_ctx_x, train_ctx_y, test_ctx_x, test_ctx_y
-		else:
-			return train_x, train_y, test_x, test_y, adj
-
-	def compression_data(self, x, if_adj = False):
-		x = x[:, self.selected_vertex]
-		if if_adj:
-			x = x[self.selected_vertex, :]
-		return x
+		ctx_x = torch.Tensor(ctx_x)
+		ctx_y = torch.Tensor(ctx_y)
+		return x, y, ctx_x, ctx_y
 
 	def load_data_for_lstm(self, mode):
 		with open("%s/%s_purposed.dat" % (self.path, mode), 'rb') as f:
@@ -363,10 +341,10 @@ class DataReader:
 		ctx_x = np.stack(ctx[:24], axis = 1)
 		ctx_y = np.stack(ctx[24:], axis = 1)
 
-		x = self.remove_zero(x)
-		y = self.remove_zero(y)
+		x = self.remove_zero_2d(x)
+		y = self.remove_zero_2d(y)
 		x = x.reshape(x.shape[0], x.shape[1], 1)
-		# y = y.reshape(y.shape[0], y.shape[1], 1)
+		y = y.reshape(y.shape[0], y.shape[1], 1)
 		print(np.sum(x == 0))
 		print(np.sum(y == 0))
 		x = torch.Tensor(x)
@@ -376,7 +354,17 @@ class DataReader:
 		ctx_y = torch.Tensor(ctx_y)
 		return x, y, ctx_x, ctx_y
 
-	def remove_zero(self, x):
+	def remove_zero_3d(self, x):
+		for i in range(x.shape[0]):
+			for j in range(x.shape[1]):
+				if x[i, j] == 0:
+					if j + 1 < x.shape[1]:
+						x[i, j] = x[i, j - 1, 0] + x[i, j + 1, 0]
+					else:
+						x[i, j] = x[i, j - 1, 0]
+		return x
+
+	def remove_zero_2d(self, x):
 		for i in range(x.shape[0]):
 			for j in range(x.shape[1]):
 				if x[i, j] == 0:
@@ -386,11 +374,12 @@ class DataReader:
 						x[i, j] = x[i, j - 1]
 		return x
 
+	def compression_data(self, x, if_adj = False):
+		x = x[:, self.selected_vertex]
+		if if_adj:
+			x = x[self.selected_vertex, :]
+		return x
+
 
 if __name__ == '__main__':
-	db = DataReader("F:/DATA/dataset/v1")
-	x, y, ctx_x, ctx_y = db.load_data_for_seq("train")
-	print(x.shape)
-	print(y.shape)
-	print(ctx_x.shape)
-	print(ctx_y.shape)
+	db = DataBuilder("F:/DATA/dataset/v2")

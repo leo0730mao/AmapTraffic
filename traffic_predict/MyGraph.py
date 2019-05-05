@@ -61,7 +61,7 @@ class GeoComputer(object):
 
 
 class Graph(object):
-	def __init__(self, length, data, need_edge = False, sigma = 10, top_left = (121.119238, 31.411676), right_bottom = (121.829403, 30.866891)):
+	def __init__(self, length, data, need_edge = False, sigma = 100, top_left = (121.119238, 31.411676), right_bottom = (121.829403, 30.866891)):
 		self.base = top_left
 		self.len = length
 		self.sigma = sigma
@@ -74,7 +74,7 @@ class Graph(object):
 		self.vertex = {}
 		for i in range(self.lngNum + 1):
 			for j in range(self.latNum + 1):
-				self.edges["%_s%s" % (i, j)] = {}
+				self.edges["%s_%s" % (i, j)] = {}
 				self.vertex["%s_%s" % (i, j)] = [0, 0]
 		self.data = data
 		self.generate()
@@ -166,6 +166,7 @@ class Graph(object):
 				return box_list
 
 	def generate(self):
+		edge_temp = []
 		for index, row in self.data.iterrows():
 			road = row['road']
 			speed = float(row['speed'])
@@ -192,6 +193,7 @@ class Graph(object):
 						while j < i:
 							dis = box_distance[i + 1] - box_distance[j + 1]
 							temp = exp(-(dis * 3600 / speed) / self.sigma)
+							edge_temp.append(temp)
 							if box_list[j] == box_list[i]:
 								print(road)
 								print(box_list[i])
@@ -210,6 +212,11 @@ class Graph(object):
 					adj[self.v_string2int(box1)][self.v_string2int(box2)] = temp
 					adj[self.v_string2int(box2)][self.v_string2int(box1)] = temp
 			self.edges = sp.csr_matrix(adj, shape = adj.shape, dtype = np.float32, copy = False)
+		edge_temp = np.array(edge_temp)
+		print(edge_temp.max())
+		print(edge_temp.min())
+		print(edge_temp.var())
+		print(edge_temp.mean())
 
 	def v_to_vector(self):
 		vertex = []
@@ -240,13 +247,44 @@ class Graph(object):
 
 
 if __name__ == '__main__':
-	data = pd.read_csv("F:/DATA/dataset/v1/road_set.csv")
-	m = Graph(1000, data, need_edge = True)
-	a, selected_vertex = m.filt_with_rect(rect = {"leftLng": 121.414316, "rightLng": 121.581042, "topLat": 31.295972, "bottomLat": 31.182597})
-	count = 0
-	for i in range(a.shape[0]):
-		if a[i, i] != 0:
-			count += 1
-	print(count)
-	with open("F:/DATA/dataset/v1/selected_vertex.dat", 'wb') as f:
-		pickle.dump(selected_vertex, f)
+	data = pd.read_csv("F:/DATA/dataset/v2/road_set.csv")
+	with open("F:/DATA/dataset/v2/selected_vertex.dat", 'rb') as f:
+		selected_vertex = pickle.load(f)
+	g = Graph(1000, data, need_edge = True)
+	e = g.e_to_matrix()
+	e = e.toarray()
+	e = e[:, selected_vertex]
+	e = e[selected_vertex, :]
+	print("-----------")
+	print(e.max())
+	print(e.min())
+	print(e.var())
+	print(e.mean())
+	new_e = np.zeros(e.shape)
+
+	arg_e = e.argsort()
+	arg_e = arg_e[:, -10:]
+	for i in range(arg_e.shape[0]):
+		temp = []
+		for j in range(arg_e.shape[1]):
+			temp.append(e[i, arg_e[i, j]])
+			# new_e[i, arg_e[i, j]] = e[i, arg_e[i, j]]
+		temp = np.array(temp)
+		print("--------------")
+		print(temp.max())
+		print(temp.min())
+		temp = np.exp(temp) / sum(np.exp(temp))
+		for j in range(len(temp)):
+			new_e[i, arg_e[i, j]] = temp[j]
+
+	print("-------------------")
+	print(new_e.max())
+	print(new_e.min())
+	print(new_e.var())
+	print(new_e.mean())
+	print(new_e.shape)
+	print(len(np.where(new_e != 0)[0]))
+	with open("F:/DATA/dataset/v2/raw_adj_softmax.dat", 'wb') as f:
+		pickle.dump(new_e, f)
+
+
