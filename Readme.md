@@ -1,6 +1,6 @@
 # Abstrct
 
-This is a traffic speed prediction system. I get the data from Amap, do some statistic and built a model based on Pytorch. The model will predict the traffic speed of each region in the future 4 hours according to previous 4 hours data.
+This is a traffic speed prediction system based on Python. I get the data from Amap, do some statistic and built a model based on Pytorch. The model will predict the traffic speed of each region in the future 4 hours according to previous 4 hours data.
 
 
 
