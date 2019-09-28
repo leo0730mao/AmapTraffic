@@ -1,0 +1,71 @@
+[SH]
+top_lat = 31.411676
+left_lng = 121.119238
+bottom_lat = 30.866891
+right_lng = 121.829403
+lat_num = 20
+lng_num = 20
+
+[BJ]
+top_lat = 40.19
+left_lng = 116.02
+bottom_lat = 39.66
+right_lng = 116.73
+lat_num = 10
+lng_num = 10
+
+[SZ]
+top_lat = 22.817
+left_lng = 113.743
+bottom_lat = 22.427
+right_lng = 114.473
+lat_num = 10
+lng_num = 10
+
+[SY]
+top_lat = 41.98
+left_lng = 123.188
+bottom_lat = 41.632
+right_lng = 123.668
+lat_num = 6
+lng_num = 6
+
+[XM]
+top_lat = 24.68
+left_lng = 117.89
+bottom_lat = 24.42
+right_lng = 118.22
+lat_num = 5
+lng_num = 5
+
+[XA]
+top_lat = 34.36
+left_lng = 108.81
+bottom_lat = 34.14
+right_lng = 109.14
+lat_num = 5
+lng_num = 5
+
+[NJ]
+top_lat = 32.136
+left_lng = 118.56
+bottom_lat = 31.886
+right_lng = 118.95
+lat_num = 5
+lng_num = 5
+
+[JX]
+top_lat = 30.84
+left_lng = 120.64
+bottom_lat = 30.65
+right_lng = 120.87
+lat_num = 5
+lng_num = 5
+
+[TY]
+top_lat = 38.03
+left_lng = 112.43
+bottom_lat = 37.7
+right_lng = 112.65
+lat_num = 5
+lng_num = 5
